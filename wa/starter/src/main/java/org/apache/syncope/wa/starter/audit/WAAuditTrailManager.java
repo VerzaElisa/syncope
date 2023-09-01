@@ -20,6 +20,7 @@ package org.apache.syncope.wa.starter.audit;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
@@ -52,13 +53,14 @@ public class WAAuditTrailManager extends AbstractAuditTrailManager {
         LOG.info("Loading application definitions");
         try {
             String output = MAPPER.writeValueAsString(Map.of("resource", audit.getResourceOperatedUpon(),
-                    "clientIpAddress", audit.getClientIpAddress(),
-                    "serverIpAddress", audit.getServerIpAddress()));
+                    "clientIpAddress", audit.getClientInfo(),
+                    "serverIpAddress", audit.getClientInfo()));
 
             AuditEntry auditEntry = new AuditEntry();
             auditEntry.setWho(audit.getPrincipal());
             auditEntry.setDate(
-                    audit.getWhenActionWasPerformed().toInstant().atOffset(OffsetDateTime.now().getOffset()));
+                    audit.getWhenActionWasPerformed().toInstant(ZoneOffset.UTC)
+                    .atOffset(OffsetDateTime.now().getOffset()));
             auditEntry.setOutput(output);
             AuditElements.Result result = StringUtils.containsIgnoreCase(audit.getActionPerformed(), "fail")
                     ? AuditElements.Result.FAILURE
