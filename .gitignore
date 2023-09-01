@@ -10,3 +10,4 @@ maven-eclipse.xml
 *nb-configuration.xml
 node_modules
 **/checkstyle.cache
+.vscode

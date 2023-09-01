@@ -242,28 +242,6 @@ under the License.
             </deployable>
           </deployables>
         </configuration>
-        <executions>
-          <execution>
-            <id>start-container</id>
-            <phase>pre-integration-test</phase>
-            <goals>
-              <goal>start</goal>
-            </goals>
-            <configuration>
-              <skip>${skipTests}</skip>
-            </configuration>
-          </execution>
-          <execution>
-            <id>stop-container</id>
-            <phase>post-integration-test</phase>
-            <goals>
-              <goal>stop</goal>
-            </goals>
-            <configuration>
-              <skip>${skipTests}</skip>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       
       <plugin>
