@@ -56,7 +56,12 @@ under the License.
       <artifactId>mockito-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
-
+    <dependency>
+      <groupId>org.junit.jupiter</groupId>
+      <artifactId>junit-jupiter-params</artifactId>
+      <version>5.2.0</version>
+      <scope>test</scope>
+    </dependency>
 
     <dependency> 
       <groupId>jakarta.servlet</groupId> 
@@ -199,14 +204,21 @@ under the License.
         </executions>
       </plugin>
       
-      <plugin>
+    <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
+        <version>2.22.0</version>
+        <dependencies>
+          <dependency>
+            <groupId>org.apache.maven.surefire</groupId>
+            <artifactId>surefire-junit4</artifactId>
+            <version>2.22.0</version>
+          </dependency>
+        </dependencies>
         <configuration>
-          <systemPropertyVariables>
-            <syncope.conf.dir>${project.build.directory}/test-classes</syncope.conf.dir>
-            <syncope.connid.location>file:${bundles.directory}/</syncope.connid.location>
-          </systemPropertyVariables>
+          <includes>
+            <include>**/*.java</include>
+          </includes>
         </configuration>
       </plugin>
 
