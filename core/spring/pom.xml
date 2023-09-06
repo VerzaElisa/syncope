@@ -37,7 +37,16 @@ under the License.
     <rootpom.basedir>${basedir}/../..</rootpom.basedir>
   </properties>
 
-  <dependencies>    
+  <dependencies> 
+    <dependency>
+      <groupId>org.apache.syncope.core</groupId>
+      <artifactId>syncope-core-persistence-jpa</artifactId>
+      <version>${project.version}</version>
+      <scope>test</scope>
+    </dependency>
+
+
+
     <dependency> 
       <groupId>jakarta.servlet</groupId> 
       <artifactId>jakarta.servlet-api</artifactId> 
