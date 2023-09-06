@@ -48,6 +48,7 @@ import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mock;
 import org.passay.CharacterRule;
 import org.passay.LengthRule;
+import org.passay.PasswordValidator;
 import org.passay.RepeatCharactersRule;
 import org.passay.Rule;
 
@@ -65,12 +66,18 @@ import org.passay.UsernameRule;
 
 
 @RunWith(value=Parameterized.class)
-public class Conf2RuleTest {
+
+public class SetConfTest {
+public enum PassRuleType {
+   DUMMY,
+   REAL
+}
+
 private int len;
 private Character illegalChar;
 private boolean isUserAllowed;
 private DefaultPasswordRuleConf defConf;
-private int count = 8;
+private int count = 9;
 private CharacterRule cr;
 private LengthRule lr;
 private IllegalCharacterRule icr;
@@ -78,63 +85,58 @@ private UsernameRule ur;
 private RepeatCharactersRule rcr;
 private List<Character> charList;
 private char[] charToRet = new char[1];
-private List<Character> special = new ArrayList<>('@');
+private DefaultPasswordRule dpr = new DefaultPasswordRule();;
+private List<Character> special = Arrays.asList('@');
+private PassRuleType type;
+private String ex = null;
+private String exception;
 
+//                                         | minLen | maxLen | alpha | lower | upper | digit | special | same |
+private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2     , 3     , 1       , 8    );
 
 
 
     @Parameters
     public static Collection<Object[]> getTestParameters(){
         return Arrays.asList(new Object[][]{
-//          | len | illegalChar | isUserAllowed |
-            { 0   , null        , true           },
-            { 2   , '!'         , false          },
+//          | len | illegalChar | isUserAllowed | type               | exception                 |
+            { 2   , '!'         , false         , PassRuleType.REAL  , null                      },
+            { 2   , '!'         , false         , PassRuleType.DUMMY , "IllegalArgumentException"},
         });
     }
 
-    public Conf2RuleTest(int len, Character illegalChar, boolean isUserAllowed) {
+    public SetConfTest(int len, Character illegalChar, boolean isUserAllowed, PassRuleType type, String exception) {
         this.len = len;
         this.illegalChar = illegalChar;
         this.isUserAllowed = isUserAllowed;
+        this.type = type;
+        this.exception = exception;
     }
 
     @Before
-    public void getPassSetUp(){
-        defConf = new DefaultPasswordRuleConf();
-        defConf = Utility.createDef(defConf, len, 0, 0, isUserAllowed, false, illegalChar, special);
-        if(illegalChar != null){
-             count = 9;
-        }else{
-            count = 1;
+    public void setConfSetUp(){
+        switch(type){
+            case REAL:
+                defConf = new MyDefPassRule();
+                defConf = Utility.createDef(defConf, len, 0, 5, isUserAllowed, true, illegalChar, special);
+                dpr.setConf(defConf);
+                break;
+            case DUMMY:
+                DummyPasswordRuleConf dummyDefConf = new DummyPasswordRuleConf();
+                try{
+                   dpr.setConf(dummyDefConf);
+                }catch(Exception e){
+                    ex = e.getClass().getSimpleName();
+                    e.printStackTrace();
+                }
+                break;
         }
     }
-
 
     @Test
-    public void rulesTest(){
-        List<Rule> ret = DefaultPasswordRule.conf2Rules(defConf);
-        System.out.println(ret.toString());
-        lr = (LengthRule)ret.get(0);
-        assertEquals(count, ret.size());
-        assertEquals(len, lr.getMinimumLength());
-        if(len == 0){
-            assertEquals(2147483647, lr.getMaximumLength());
-        }else{
-            assertEquals(len, lr.getMinimumLength());
-            for(int i = 1; i<6; i++){
-                cr = (CharacterRule)ret.get(i);
-                assertEquals(len, cr.getNumberOfCharacters());
-            }
-            icr = (IllegalCharacterRule)ret.get(6);
-            rcr = (RepeatCharactersRule)ret.get(7);
-            ur = (UsernameRule)ret.get(8);
-            charToRet = icr.getIllegalCharacters();
-            assertEquals(illegalChar.charValue(), charToRet[0]);
-            assertTrue(ur.isMatchBackwards());
-            assertTrue(ur.isIgnoreCase());
-
-        }
-
+    public void setConfTest(){
+        assertEquals(defConf, dpr.conf);
+        assertEquals(ex, exception);
+//        assertEquals(Utility.getRule().size(), dpr.passwordValidator.getRules().size());
     }
-
 }

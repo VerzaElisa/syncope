@@ -48,6 +48,8 @@ import org.junit.runners.Parameterized.Parameters;
 import org.mockito.Mock;
 import org.passay.CharacterRule;
 import org.passay.LengthRule;
+import org.passay.PasswordData;
+import org.passay.PasswordValidator;
 import org.passay.RepeatCharactersRule;
 import org.passay.Rule;
 
@@ -65,76 +67,88 @@ import org.passay.UsernameRule;
 
 
 @RunWith(value=Parameterized.class)
-public class Conf2RuleTest {
+
+public class EnforcesTest {
+public enum PassRuleType {
+   DUMMY,
+   REAL
+}
+
 private int len;
-private Character illegalChar;
-private boolean isUserAllowed;
+private boolean isUserAllowed = false;
 private DefaultPasswordRuleConf defConf;
-private int count = 8;
+private int count = 9;
 private CharacterRule cr;
 private LengthRule lr;
 private IllegalCharacterRule icr;
 private UsernameRule ur;
 private RepeatCharactersRule rcr;
-private List<Character> charList;
+private List<Character> illegalList = Arrays.asList('!');
 private char[] charToRet = new char[1];
-private List<Character> special = new ArrayList<>('@');
-
+private DefaultPasswordRule dpr;
+private List<Character> special = Arrays.asList('@');
+private Set<String> notPermittedList;
+private PassRuleType type;
+private String ex = null;
+private String exception;
+private String username;
+private String clear;
+private String notPermitted;
+private int times = 0;
+//                                         | minLen | maxLen | alpha | lower | upper | digit | special | same |
+private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2     , 3     , 1       , 8    );
 
 
 
     @Parameters
     public static Collection<Object[]> getTestParameters(){
         return Arrays.asList(new Object[][]{
-//          | len | illegalChar | isUserAllowed |
-            { 0   , null        , true           },
-            { 2   , '!'         , false          },
+//          | exception                  | clear      | notPermitted | username   |
+            { "PasswordPolicyException"  , "o"        , ""           , null       },
+            { "PasswordPolicyException"  , "AAaa234@" , "AAaa234@"   , "testUser" },
+            { null                       , "AAaa234@" , "test"       , "testUser" },
+            { "PasswordPolicyException"  , "AAaa234@" , "test"       , "AAaa234@" },
         });
     }
 
-    public Conf2RuleTest(int len, Character illegalChar, boolean isUserAllowed) {
-        this.len = len;
-        this.illegalChar = illegalChar;
-        this.isUserAllowed = isUserAllowed;
+    public EnforcesTest(String exception, String clear, String notPermitted, String username) {
+        this.exception = exception;
+        this.clear = clear;
+        this.notPermitted = notPermitted;
+        this.username = username;
     }
 
     @Before
-    public void getPassSetUp(){
-        defConf = new DefaultPasswordRuleConf();
-        defConf = Utility.createDef(defConf, len, 0, 0, isUserAllowed, false, illegalChar, special);
-        if(illegalChar != null){
-             count = 9;
-        }else{
-            count = 1;
+    public void enforceOneSetUp(){
+        dpr = new DefaultPasswordRule();
+        Utility.createListRule(param, 0, 1, illegalList, special, isUserAllowed);
+        dpr.passwordValidator = new PasswordValidator(Utility.getRule().toArray(new Rule[0]));
+        dpr.passwordValidator = spy(dpr.passwordValidator);
+        notPermittedList = Utility.getSetWords(notPermitted);
+        notPermittedList = spy(notPermittedList);
+        if(clear != username && clear.equals("AAaa234@")){
+            times = 1;
         }
     }
 
+    @Before
+    public void enforceTwoSetUp(){
+        List<String> np = Arrays.asList("ciao", "test", "java");
+        defConf = spy(DefaultPasswordRuleConf.class);
+        when(defConf.getSchemasNotPermitted()).thenReturn(np);
+    }
 
     @Test
-    public void rulesTest(){
-        List<Rule> ret = DefaultPasswordRule.conf2Rules(defConf);
-        System.out.println(ret.toString());
-        lr = (LengthRule)ret.get(0);
-        assertEquals(count, ret.size());
-        assertEquals(len, lr.getMinimumLength());
-        if(len == 0){
-            assertEquals(2147483647, lr.getMaximumLength());
-        }else{
-            assertEquals(len, lr.getMinimumLength());
-            for(int i = 1; i<6; i++){
-                cr = (CharacterRule)ret.get(i);
-                assertEquals(len, cr.getNumberOfCharacters());
-            }
-            icr = (IllegalCharacterRule)ret.get(6);
-            rcr = (RepeatCharactersRule)ret.get(7);
-            ur = (UsernameRule)ret.get(8);
-            charToRet = icr.getIllegalCharacters();
-            assertEquals(illegalChar.charValue(), charToRet[0]);
-            assertTrue(ur.isMatchBackwards());
-            assertTrue(ur.isIgnoreCase());
-
+    public void enforceTest(){
+        try{
+            dpr.enforce(clear, username, notPermittedList);
+        }catch(Exception e){
+            ex = e.getClass().getSimpleName();
+            e.printStackTrace();
+        }finally{
+            verify(dpr.passwordValidator).validate(any(PasswordData.class));
+            verify(notPermittedList, times(times)).stream();
+            assertEquals(exception, ex);
         }
-
     }
-
 }
