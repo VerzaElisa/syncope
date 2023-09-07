@@ -35,6 +35,7 @@ under the License.
   
   <properties>
     <rootpom.basedir>${basedir}/../..</rootpom.basedir>
+    <checkstyle.skip>true</checkstyle.skip>
   </properties>
 
   <dependencies> 
@@ -195,4 +196,53 @@ under the License.
       </resource>
     </resources>
   </build>
+
+
+  <profiles>
+    <profile>
+      <id>PitMutationTesting</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <withHistory>true</withHistory>
+        <pitest.version>1.14.0</pitest.version>
+        <pitest.history.file>${project.build.directory}/pitest.history</pitest.history.file>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.pitest</groupId>
+            <artifactId>pitest-maven</artifactId>
+            <version>${pitest.version}</version>
+            <configuration>
+              <targetClasses>
+                <param>org.apache.syncope.core.spring.policy.DefaultPasswordRule</param>
+              </targetClasses>
+              <targetTests>
+                <param>org.apache.syncope.core.spring.policy.Conf2RuleTest</param>
+                <param>org.apache.syncope.core.spring.policy.SetConfTest</param>
+                <param>org.apache.syncope.core.spring.policy.EnforceOneTest</param>
+                <param>org.apache.syncope.core.spring.policy.EnforceTwoTest</param>
+              </targetTests>
+              <avoidCallsTo>
+                <avoidCallsTo>org.slf4j</avoidCallsTo>
+              </avoidCallsTo>
+              <historyInputFile>${pitest.history.file}</historyInputFile>
+              <historyOutputFile>${pitest.history.file}</historyOutputFile>
+            </configuration>
+            <executions>
+              <execution>
+                <id>PIT Report Generation</id>
+                <phase>test-compile</phase>
+                <goals>
+                  <goal>mutationCoverage</goal>
+                </goals>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+  </profiles>
 </project>

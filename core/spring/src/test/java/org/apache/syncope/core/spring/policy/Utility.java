@@ -1,6 +1,5 @@
 package org.apache.syncope.core.spring.policy;
 
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 

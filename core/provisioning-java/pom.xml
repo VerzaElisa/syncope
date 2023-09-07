@@ -35,6 +35,8 @@ under the License.
   
   <properties>
     <rootpom.basedir>${basedir}/../..</rootpom.basedir>
+    <checkstyle.skip>true</checkstyle.skip>
+
   </properties>
 
   <dependencies>

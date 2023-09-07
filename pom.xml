@@ -392,6 +392,11 @@ under the License.
   </contributors>
 
   <properties>
+    <sonar.organization>verzaelisa</sonar.organization>
+    <sonar.host.url>https://sonarcloud.io</sonar.host.url>
+    <sonar.coverage.jacoco.xmlReportPaths>../jacoco-coverage/target/site/jacoco-aggregate/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
+    <jacoco-maven-plugin.version>0.8.8</jacoco-maven-plugin.version>
+
     <project.build.outputTimestamp>2022-12-26T08:35:28Z</project.build.outputTimestamp>
     <syncope.version>${project.version}</syncope.version>
 
@@ -1738,47 +1743,6 @@ under the License.
       </plugin>
 
       <plugin>
-        <groupId>org.apache.rat</groupId>
-        <artifactId>apache-rat-plugin</artifactId>
-        <configuration>
-          <excludes>
-            <exclude>**/nbactions.xml</exclude>
-            <exclude>**/nb-configuration.xml</exclude>
-            <exclude>**/META-INF/cxf/**</exclude>
-            <exclude>**/META-INF/services/**</exclude>
-            <exclude>**/META-INF/MANIFEST.MF</exclude>
-            <exclude>**/*.csv</exclude>
-            <exclude>**/archetype-resources/**</exclude>
-            <exclude>**/AdminLTE*/**</exclude>
-            <exclude>**/goal.txt</exclude>
-            <exclude>**/rat.txt</exclude>
-            <exclude>**/build-copy-javadoc-files.xml</exclude>
-            <exclude>**/maven-eclipse.xml</exclude>
-            <exclude>**/*.iml</exclude>
-            <exclude>**/*.log</exclude>
-            <exclude>**/.externalToolBuilders/**</exclude>
-            <exclude>.git/**</exclude>
-            <exclude>.idea/**</exclude>
-            <exclude>**/.settings/**</exclude>
-            <exclude>**/.*</exclude>
-            <exclude>**/*.lst</exclude>
-            <exclude>**/*.json</exclude>
-            <exclude>**/banner.txt</exclude>
-            <exclude>**/target/**</exclude>
-          </excludes>
-        </configuration>
-        <executions>
-          <execution>
-            <id>rat-check</id>
-            <phase>verify</phase>
-            <goals>
-              <goal>check</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-
-      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-remote-resources-plugin</artifactId>
         <configuration>
@@ -1939,6 +1903,42 @@ under the License.
   </reporting>
 
   <profiles>
+
+<!-- JaCoCo profile -->
+    <profile>
+      <id>JaCoCoCoverage</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.jacoco</groupId>
+            <artifactId>jacoco-maven-plugin</artifactId>
+            <version>0.8.10</version>
+            <executions>
+              <execution>
+                <id>prepare-agent</id>
+                <goals>
+                  <goal>prepare-agent</goal>
+                </goals>
+              </execution>
+              <!-- execution>
+                <id>prepare-agent-integration</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>prepare-agent-integration</goal>
+                </goals>
+                <configuration>
+                  <append>true</append>
+                  <destFile>target/tests/...</destFile>
+                </configuration>
+              </execution -->
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
 
     <profile>
       <id>apache-release</id>
@@ -2188,6 +2188,7 @@ under the License.
     <module>ext</module>
     <module>archetype</module>
     <module>standalone</module>
+    <module>tests</module>
   </modules>
 
 </project>

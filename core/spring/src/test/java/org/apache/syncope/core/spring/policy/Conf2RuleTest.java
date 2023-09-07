@@ -20,44 +20,18 @@
 package org.apache.syncope.core.spring.policy;
 
 import static org.junit.Assert.*;
-import static org.mockito.Mockito.*;
 
-import java.io.UnsupportedEncodingException;
 import java.util.*;
 
-import org.apache.syncope.common.lib.Attr;
-import org.apache.syncope.common.lib.request.GroupCR;
-import org.apache.syncope.common.lib.request.UserCR;
-import org.apache.syncope.common.lib.to.ConnObject;
-import org.apache.syncope.common.lib.types.AnyTypeKind;
-import org.apache.syncope.core.persistence.api.dao.*;
-import org.apache.syncope.core.persistence.api.entity.*;
-import org.apache.syncope.core.persistence.api.entity.policy.PasswordPolicy;
-import org.apache.syncope.core.persistence.api.entity.task.PullTask;
-import org.apache.syncope.core.spring.security.DefaultPasswordGenerator;
-import org.identityconnectors.framework.common.objects.Attribute;
-import org.identityconnectors.framework.common.objects.AttributeBuilder;
-import org.identityconnectors.framework.common.objects.ConnectorObject;
-import org.identityconnectors.framework.common.objects.ConnectorObjectBuilder;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
-import org.mockito.Mock;
 import org.passay.CharacterRule;
 import org.passay.LengthRule;
-import org.passay.RepeatCharactersRule;
 import org.passay.Rule;
 
-import org.apache.syncope.core.provisioning.api.MappingManager;
-import org.apache.syncope.core.spring.security.PasswordGenerator;
-import org.identityconnectors.common.security.GuardedString;
-import org.identityconnectors.common.security.SecurityUtil;
-import org.identityconnectors.common.security.GuardedByteArray;
-import org.apache.syncope.common.lib.request.AnyCR;
-import org.apache.syncope.common.lib.to.Provision;
 import org.apache.syncope.common.lib.policy.DefaultPasswordRuleConf;
 import org.passay.IllegalCharacterRule;
 import org.passay.UsernameRule;
@@ -75,8 +49,6 @@ private CharacterRule cr;
 private LengthRule lr;
 private IllegalCharacterRule icr;
 private UsernameRule ur;
-private RepeatCharactersRule rcr;
-private List<Character> charList;
 private char[] charToRet = new char[1];
 private List<Character> special = new ArrayList<>('@');
 
@@ -126,7 +98,6 @@ private List<Character> special = new ArrayList<>('@');
                 assertEquals(len, cr.getNumberOfCharacters());
             }
             icr = (IllegalCharacterRule)ret.get(6);
-            rcr = (RepeatCharactersRule)ret.get(7);
             ur = (UsernameRule)ret.get(8);
             charToRet = icr.getIllegalCharacters();
             assertEquals(illegalChar.charValue(), charToRet[0]);

@@ -23,6 +23,7 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 import org.apache.syncope.common.lib.Attr;
@@ -177,7 +178,7 @@ public class GetPassTest {
                 toSet = new GuardedString(passwordToChar);
                 break;
             case GUARDEDBYTEARRAY:
-                byte[] passwordToByte = valueToWrite.getBytes("UTF-8");
+                byte[] passwordToByte = valueToWrite.getBytes(StandardCharsets.UTF_8);
                 toSet = new GuardedByteArray(passwordToByte);
                 break;
             case BYTE:
