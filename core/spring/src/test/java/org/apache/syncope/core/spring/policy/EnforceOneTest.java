@@ -20,6 +20,8 @@
 package org.apache.syncope.core.spring.policy;
 
 import static org.junit.Assert.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.io.UnsupportedEncodingException;
@@ -30,6 +32,7 @@ import org.apache.syncope.common.lib.request.GroupCR;
 import org.apache.syncope.common.lib.request.UserCR;
 import org.apache.syncope.common.lib.to.ConnObject;
 import org.apache.syncope.common.lib.types.AnyTypeKind;
+import org.apache.syncope.common.lib.types.CipherAlgorithm;
 import org.apache.syncope.core.persistence.api.dao.*;
 import org.apache.syncope.core.persistence.api.entity.*;
 import org.apache.syncope.core.persistence.api.entity.policy.PasswordPolicy;
@@ -52,6 +55,9 @@ import org.passay.PasswordData;
 import org.passay.PasswordValidator;
 import org.passay.RepeatCharactersRule;
 import org.passay.Rule;
+import org.apache.syncope.core.persistence.api.entity.user.LinkedAccount;
+import org.apache.syncope.core.persistence.api.entity.user.LAPlainAttr;
+
 
 import org.apache.syncope.core.provisioning.api.MappingManager;
 import org.apache.syncope.core.spring.security.PasswordGenerator;
@@ -64,11 +70,9 @@ import org.apache.syncope.common.lib.policy.DefaultPasswordRuleConf;
 import org.passay.IllegalCharacterRule;
 import org.passay.UsernameRule;
 
-
-
 @RunWith(value=Parameterized.class)
 
-public class EnforcesTest {
+public class EnforceOneTest {
 public enum PassRuleType {
    DUMMY,
    REAL
@@ -95,6 +99,8 @@ private String username;
 private String clear;
 private String notPermitted;
 private int times = 0;
+private String key = "testKey";
+private LinkedAccount account;
 //                                         | minLen | maxLen | alpha | lower | upper | digit | special | same |
 private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2     , 3     , 1       , 8    );
 
@@ -111,7 +117,7 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
         });
     }
 
-    public EnforcesTest(String exception, String clear, String notPermitted, String username) {
+    public EnforceOneTest(String exception, String clear, String notPermitted, String username) {
         this.exception = exception;
         this.clear = clear;
         this.notPermitted = notPermitted;
@@ -131,15 +137,8 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
         }
     }
 
-    @Before
-    public void enforceTwoSetUp(){
-        List<String> np = Arrays.asList("ciao", "test", "java");
-        defConf = spy(DefaultPasswordRuleConf.class);
-        when(defConf.getSchemasNotPermitted()).thenReturn(np);
-    }
-
     @Test
-    public void enforceTest(){
+    public void enforceOneTest(){
         try{
             dpr.enforce(clear, username, notPermittedList);
         }catch(Exception e){
@@ -152,3 +151,18 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
         }
     }
 }
+
+
+        // //creazione del plain schema con key
+        // JPAPlainSchema plainSchema = new JPAPlainSchema();
+        // plainSchema.setKey(key);
+        // //creazione plainAttr con schema
+        // JPALAPlainAttr plainAttr = new JPALAPlainAttr();
+        // plainAttr.setSchema(plainSchema);
+        // //assegnazione di un valore all'attr
+        // JPALAPlainAttrUniqueValue unique = spy(JPALAPlainAttrUniqueValue.class);
+        // when(unique.getValueAsString()).thenReturn("testValue");
+        // plainAttr.setUniqueValue(unique);
+        // //creazione linked acoount
+        // JPALinkedAccount account = new LinkedAccount();
+        // account.add(plainAttr);
