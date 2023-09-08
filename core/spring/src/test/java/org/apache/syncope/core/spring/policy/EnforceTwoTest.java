@@ -69,7 +69,7 @@ private String value;
 private String ex = null;
 private List<String> retList = new ArrayList<String>();
 private List<String> ret;
-
+private boolean encrypt;
 private int timesUser = 1;
 private int timesDecode = 1;
 private int timesCipher = 1;
@@ -83,19 +83,22 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
     @Parameters
     public static Collection<Object[]> getTestParameters(){
         return Arrays.asList(new Object[][]{
-//          | exception                 | pass              | username   | toDecode | isSchemaPermitted | value            |
-            { "PasswordPolicyException" , "AAaa234@"        , "AAaa234@" , true     , false             , "01-01-19"       },
-            { null                      , null              , "UserTest" , true     , false             , null             },
-            { null                      , "AAaa234@"        , "UserTest" , true     , true              , "PermittedValue" },
-            { "PasswordPolicyException" , "AAaa234@"        , "UserTest" , true     , false             , "AAaa234@"       },
-            { null                      , "AAaa234@"        , "UserTest" , false    , true              , "PermittedValue" },
+//          | exception                 | pass              | username   | toDecode | encrypt | isSchemaPermitted | value            |
+            { "PasswordPolicyException" , "AAaa234@"        , "AAaa234@" , true     , true    , false             , "01-01-19"       },
+            { null                      , null              , "UserTest" , true     , true    , false             , null             },
+            { null                      , "AAaa234@"        , "UserTest" , true     , true    , false             , ""               },
+            { null                      , "AAaa234@"        , "UserTest" , true     , false   , true              , "PermittedValue" },
+            { null                      , "AAaa234@"        , "UserTest" , true     , true    , true              , "PermittedValue" },
+            { "PasswordPolicyException" , "AAaa234@"        , "UserTest" , true     , true    , false             , "AAaa234@"       },
+            { null                      , "AAaa234@"        , "UserTest" , false    , true    , true              , "PermittedValue" },
         });  
     }
 
-    public EnforceTwoTest(String exception, String pass, String username, boolean toDecode, boolean isSchemaPermitted, String value) {
+    public EnforceTwoTest(String exception, String pass, String username, boolean toDecode, boolean encrypt, boolean isSchemaPermitted, String value) {
         this.exception = exception;
         this.pass = pass;
         this.toDecode = toDecode;
+        this.encrypt = encrypt;
         this.username = username;
         this.isSchemaPermitted = isSchemaPermitted;
         this.value = value;
@@ -103,6 +106,7 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
 
     @Before
     public void enforceTwoSetUp() throws InvalidKeyException, UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+        List<String> valueList = new ArrayList<String>();
         dpr = new DefaultPasswordRule();
         String ret = pass;
         timesDecode = 1;
@@ -122,8 +126,12 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
         //Mock di account e stub dei metodi necessari
         account = mock(LinkedAccount.class);
         if(toDecode){
-            Encryptor ENCRYPTOR = Encryptor.getInstance();
-            ret = ENCRYPTOR.encode(pass, CipherAlgorithm.AES);
+            if(encrypt){
+                Encryptor ENCRYPTOR = Encryptor.getInstance();
+                ret = ENCRYPTOR.encode(pass, CipherAlgorithm.AES);
+            }else{
+                timesUser = 0;
+            }
         }else{
             timesUser = 0;
             timesCipher = 0;
@@ -134,12 +142,19 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
         when(account.getCipherAlgorithm()).thenReturn(CipherAlgorithm.AES);
 
         if(!isSchemaPermitted){
+            if(value != ""){
+                valueList.add(value);
+            }
             //Costruzione del plainAttr da cui prendere i valori degli attributi
             LAPlainAttr mockedPlainAttr = mock(LAPlainAttr.class);
-            when(mockedPlainAttr.getValuesAsStrings()).thenReturn(Arrays.asList(value));
+            if(value!=null){
+                when(mockedPlainAttr.getValuesAsStrings()).thenReturn(valueList);
+            }else{
+                when(mockedPlainAttr.getValuesAsStrings()).thenReturn(null);
+            }
             Optional<? extends LAPlainAttr> optionalPlainAttr = Optional.of(mockedPlainAttr);
             doReturn(optionalPlainAttr).when(account).getPlainAttr(anyString());
-            if(value != null){
+            if(value != null && value != ""){
                 retList.add(value);
             }
         }else{
@@ -158,10 +173,9 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
             dpr.enforce(account);
         }catch(Exception e){
             ex = e.getClass().getSimpleName();
-            e.printStackTrace();
         }finally{
             ret = dpr.conf.getWordsNotPermitted();
-            if(!isSchemaPermitted){
+            if(retList.size() > 0 && !isSchemaPermitted){
                 assertEquals(ret.get(0), retList.stream().findFirst().orElse(null));
             }else{
                 assertTrue(ret.isEmpty());

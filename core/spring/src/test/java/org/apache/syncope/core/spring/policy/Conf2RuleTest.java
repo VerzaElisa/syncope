@@ -20,6 +20,9 @@
 package org.apache.syncope.core.spring.policy;
 
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 import java.util.*;
 
@@ -50,7 +53,8 @@ private LengthRule lr;
 private IllegalCharacterRule icr;
 private UsernameRule ur;
 private char[] charToRet = new char[1];
-private List<Character> special = new ArrayList<>('@');
+private List<Character> special = Arrays.asList('@');
+private String error = "INSUFFICIENT_SPECIAL";
 
 
 
@@ -72,7 +76,7 @@ private List<Character> special = new ArrayList<>('@');
 
     @Before
     public void getPassSetUp(){
-        defConf = new DefaultPasswordRuleConf();
+        defConf = spy(DefaultPasswordRuleConf.class);
         defConf = Utility.createDef(defConf, len, 0, 0, isUserAllowed, false, illegalChar, special);
         if(illegalChar != null){
              count = 9;
@@ -80,7 +84,6 @@ private List<Character> special = new ArrayList<>('@');
             count = 1;
         }
     }
-
 
     @Test
     public void rulesTest(){
@@ -90,12 +93,20 @@ private List<Character> special = new ArrayList<>('@');
         assertEquals(count, ret.size());
         assertEquals(len, lr.getMinimumLength());
         if(len == 0){
+            verify(defConf).getMinLength();
             assertEquals(2147483647, lr.getMaximumLength());
         }else{
+            verify(defConf, times(2)).getMinLength();
             assertEquals(len, lr.getMinimumLength());
+            assertEquals(len, lr.getMaximumLength());
+            
             for(int i = 1; i<6; i++){
                 cr = (CharacterRule)ret.get(i);
                 assertEquals(len, cr.getNumberOfCharacters());
+                if(i == 5){
+                    assertEquals(error, cr.getCharacterData().getErrorCode());
+                    assertEquals(special.get(0).toString(), cr.getCharacterData().getCharacters());
+                }
             }
             icr = (IllegalCharacterRule)ret.get(6);
             ur = (UsernameRule)ret.get(8);
@@ -105,7 +116,5 @@ private List<Character> special = new ArrayList<>('@');
             assertTrue(ur.isIgnoreCase());
 
         }
-
     }
-
 }

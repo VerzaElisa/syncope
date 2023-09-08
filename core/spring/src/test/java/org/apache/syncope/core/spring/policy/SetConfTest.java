@@ -21,13 +21,23 @@ package org.apache.syncope.core.spring.policy;
 
 import static org.junit.Assert.*;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.Parameterized;
 import org.junit.runners.Parameterized.Parameters;
+
+import com.nimbusds.jose.util.IOUtils;
+
 import org.apache.syncope.common.lib.policy.DefaultPasswordRuleConf;
 
 
