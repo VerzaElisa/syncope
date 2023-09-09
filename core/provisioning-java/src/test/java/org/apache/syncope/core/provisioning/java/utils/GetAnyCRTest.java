@@ -23,12 +23,14 @@ import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
 import java.io.UnsupportedEncodingException;
+import java.text.ParseException;
 import java.util.*;
 import java.util.stream.Stream;
 
 import org.apache.syncope.common.lib.Attr;
 import org.apache.syncope.common.lib.request.GroupCR;
 import org.apache.syncope.common.lib.request.UserCR;
+import org.apache.syncope.common.lib.request.AnyUR;
 import org.apache.syncope.common.lib.to.ConnObject;
 import org.apache.syncope.common.lib.types.AnyTypeKind;
 import org.apache.syncope.core.persistence.api.dao.*;
@@ -53,6 +55,7 @@ import org.mockito.Answers;
 import org.mockito.Mock;
 import org.apache.syncope.core.provisioning.api.MappingManager;
 import org.apache.syncope.core.spring.security.PasswordGenerator;
+import org.h2.engine.User;
 import org.identityconnectors.common.security.GuardedString;
 import org.identityconnectors.common.security.SecurityUtil;
 import org.identityconnectors.common.security.GuardedByteArray;
@@ -60,6 +63,18 @@ import org.apache.syncope.common.lib.request.AnyCR;
 import org.apache.syncope.common.lib.to.Provision;
 import org.apache.syncope.common.lib.to.AnyTO;
 import org.apache.syncope.common.lib.to.Item;
+import org.apache.syncope.common.lib.to.UserTO;
+import org.apache.syncope.common.lib.request.AnyObjectCR;
+import org.apache.syncope.core.provisioning.api.DerAttrHandler;
+import org.apache.syncope.core.provisioning.api.IntAttrName;
+import org.apache.syncope.core.provisioning.api.VirAttrHandler;
+import org.apache.syncope.core.provisioning.api.cache.VirAttrCache;
+import org.apache.syncope.core.provisioning.api.cache.VirAttrCacheKey;
+import org.apache.syncope.core.provisioning.java.DefaultMappingManager;
+import org.apache.syncope.core.provisioning.api.IntAttrNameParser;
+
+
+
 
 
 
@@ -71,39 +86,26 @@ public class GetAnyCRTest {
         STRING,
         BYTE
     }
-
-    // private GuardedByteArray gbaPass;
-    // private String strPass;
-    // private Object objPass;
-    // private Object setPass;
-    // private ConnObjectUtils couSpy;
-    // private ObjType actualObj;
-    // private String fiql;
-    // private final String attrName = "TestAttrName";
-    // private Set<Attribute> set = new HashSet<Attribute>();
-    // private Attr attrRet;
-    // private final String passToSet = "PasswordToSet";
-    // private String exception;
-    // private String ret;
-    // private List<String> attrVal = new ArrayList<String>();
-    // private String value;
-    // private Attribute attr;
-    // private boolean empty = false;
     
     //Parametri
-    private final String anyCR;
-    private boolean realmIsNull;
+    private String exception;
+    private String attrName;
+
     //Vere
     private AnyTypeKind anyTypeKind;
     private ConnObjectUtils cou;
+    private ConnObjectUtils couToSpy;
+
+    private String attrVal = "testVal";
+        //provision richiede sempre un attributo può o meno essere in obj
+    private String provisionAttrName = "commonObj";
     private String path = "/file"; //parametro
-    private String attrName = "attrName";
     private Attribute attr;
+
     //Mocked
     private GroupDAO groupDAO;
     private UserDAO userDAO;
     private AnyObjectDAO anyObjectDAO;
-    private EntityFactory entityFactory;
     private ConnectorObject obj;
     private PullTask pullTask;
     private AnyUtilsFactory anyUtilsFactory;
@@ -111,123 +113,89 @@ public class GetAnyCRTest {
     private RealmDAO realmDAO;
     private Provision provision;
     private PasswordGenerator passwordGenerator;
-    private AnyTO toMock;
     private MappingManager mappingManager;
-    
-
-    @Mock
-    ExternalResourceDAO resourceDAO;
+    private ExternalResourceDAO resourceDAO;
+    private AnyTypeDAO anyTypeDAO;
+    private RelationshipTypeDAO relationshipTypeDAO;
+    private ApplicationDAO applicationDAO;
+    private ImplementationDAO implementationDAO;
+    private DerAttrHandler derAttrHandler;
+    private VirAttrHandler virAttrHandler;
+    private VirAttrCache virAttrCache;
+    private IntAttrNameParser intAttrNameParser;
 
 
     @Parameters
     public static Collection<Object[]> getTestParameters(){
         return Arrays.asList(new Object[][]{
-                {""         , true },
-                {""         , true },
-                {"TestFiql" , true },
-                {"TestFiql" , true },
-                {"TestFiql" , true },
+//              | exception             | attrName    |
+                {null                   , "commonObj" },
+
         });
     }
 
-    public GetAnyCRTest(String anyCR, boolean realmIsNull) {
-        this.anyCR = anyCR;
-        this.realmIsNull = realmIsNull;
+    public GetAnyCRTest(String exception, String attrName) {
+        this.exception = exception;
+        this.attrName = attrName;
     }
 
     @Before
-    public void anyCRSetUp() throws UnsupportedEncodingException{
-        anyTypeKind = AnyTypeKind.USER; //Parametro
-        attr = AttributeBuilder.build(attrName, "attrValue");
-        mockGenerator();
-        cou = new ConnObjectUtils(templateUtils, realmDAO, userDAO, resourceDAO, passwordGenerator, mappingManager, anyUtilsFactory);
+    public void anyCRSetUp() throws UnsupportedEncodingException, ParseException{
+        templateUtils = mock(TemplateUtils.class);
+        realmDAO = mock(RealmDAO.class);
+        userDAO = mock(UserDAO.class);
+        passwordGenerator = mock(PasswordGenerator.class);
+        resourceDAO = mock(ExternalResourceDAO.class);
+        mappingManager = mock(MappingManager.class);
+        anyUtilsFactory = mock(AnyUtilsFactory.class);
+        obj = mock(ConnectorObject.class);
+        pullTask = mock(PullTask.class);
+        anyTypeKind = AnyTypeKind.USER;
+        provision = mock(Provision.class);
+
+        //Viene fatta la spy della classe per ridefinire il comportamento del metodo getAnyTOFromConnObject
+        couToSpy = new ConnObjectUtils(templateUtils, realmDAO, userDAO, resourceDAO, passwordGenerator, mappingManager, anyUtilsFactory);
+        cou = spy(couToSpy);
+        AnyTO myAnyTO = createAnyTO();
+        myAnyTO.setKey("ella");
+        doReturn(myAnyTO).when(cou).getAnyTOFromConnObject(any(ConnectorObject.class), any(PullTask.class), any(AnyTypeKind.class), any(Provision.class));
     }
 
 
     @Test
-    public void anyCRTest(){
-        cou.getAnyCR(obj, pullTask, anyTypeKind, provision, false);
-        int ret = 1;
-        assertEquals(1, ret);
+    public void anyURTest(){
+        try{
+            AnyUR ret = cou.getAnyUR("key", obj, new UserTO(), pullTask, anyTypeKind, provision);
+            assertEquals("key", ret.getKey());
+        }catch(Exception e){
+            e.printStackTrace();
+        }
     }
 
+    public <T extends AnyTO> T createAnyTO(){
+        T myAnyTO = (T) new UserTO();
+        return myAnyTO;
+    }
 
-    public void mockGenerator(){
-        Item itemToAdd = spy(Item.class);
-        when(itemToAdd.getExtAttrName()).thenReturn(attrName);
+    public <C extends AnyCR> C createAnyCR() {
+        C result = null;
 
-        Set<String> retSet = new HashSet<String>();
-        List<String> retList = new ArrayList<String>();
-        List<Item> itemList = new ArrayList<Item>();
-        itemList.add(itemToAdd);
-        Stream<Item> itemStream = itemList.stream();
+        switch (anyTypeKind) {
+            case USER:
+                result = (C) new UserCR();
+                break;
 
-        templateUtils = mock(TemplateUtils.class);
-        realmDAO = mock(RealmDAO.class);
-        passwordGenerator = mock(PasswordGenerator.class);
-        mappingManager = mock(MappingManager.class, Answers.CALLS_REAL_METHODS);
+            case GROUP:
+                result = (C) new GroupCR();
+                break;
 
-        //Definisco tutti i metodi di obj che mi servono
-        obj = mock(ConnectorObject.class);
-        when(obj.getAttributeByName(itemToAdd.getExtAttrName())).thenReturn(attr);
+            case ANY_OBJECT:
+                result = (C) new AnyObjectCR();
+                break;
 
+            default:
+        }
 
-        //Definisco tutti i metodi di pullTask che mi servono
-        pullTask = mock(PullTask.class, RETURNS_DEEP_STUBS);
-        when(pullTask.getDestinationRealm().getFullPath()).thenReturn(path);
-
-        //Definisco tutti i metodi di provisioning che mi servono
-        provision = mock(Provision.class, RETURNS_DEEP_STUBS);
-        when(provision.getAnyType()).thenReturn("MyType");
-        when(provision.getAuxClasses()).thenReturn(retList);
-        when(provision.getMapping().getItems().stream()).thenReturn(itemStream);
-
-        //Definisco tutti i metodi di AnyTO che mi servono
-        toMock = mock(AnyTO.class, Answers.CALLS_REAL_METHODS);
-        when(toMock.getAuxClasses()).thenReturn(retSet);
-
-        //anyUtils factory ritorna un'istanza mockata di anyTO
-        anyUtilsFactory = mock(AnyUtilsFactory.class, RETURNS_DEEP_STUBS);
-        when(anyUtilsFactory.getInstance(anyTypeKind).newAnyTO()).thenReturn(toMock);
-
-        // userDAO = mock(JPAUserDAO.class);
-        // groupDAO = mock(GroupDAO.class);
-        // anyObjectDAO = mock(AnyObjectDAO.class);
-        // entityFactory = mock(EntityFactory.class);
-
-
-        // AnyCR aCR;
-
-        // realmDAO = mock(JPARealmDAO.class, RETURNS_DEEP_STUBS);
-        // provision = mock(Provision.class, RETURNS_DEEP_STUBS);
-        // pullTask = mock(PullTask.class, RETURNS_DEEP_STUBS);
-        // ConnectorObjectBuilder cob = new ConnectorObjectBuilder();
-        // cob.setUid("UidTest");
-        // cob.setName("Conn obj name");
-        // obj = cob.build();
-        // passwordGenerator = mock(DefaultPasswordGenerator.class);
-        // List<PasswordPolicy> passwordPolicies = new ArrayList<>();
-
-        // if(anyCR.equals("uCR")){
-        //     aCR = new UserCR();
-        // }
-        // else{
-        //     aCR = new GroupCR();
-        // }
-
-
-        // if(realmIsNull){
-        //     when(realmDAO.findByFullPath(aCR.getRealm())).thenReturn(null);
-        // }
-        // else{
-        //     when(realmDAO.findByFullPath(aCR.getRealm())).thenReturn(new JPARealm());
-        // }
-
-        // when(passwordGenerator.generate(passwordPolicies)).thenReturn(passToSet);
-        // when(pullTask.getDestinationRealm().getFullPath()).thenReturn("my/testing/path");
-        // when(provision.getAnyType()).thenReturn(AnyTypeKind.USER);
-        // when(provision.getAnyType().getKey()).thenReturn("key test");
-        // when(provision.getResource().isRandomPwdIfNotProvided()).thenReturn(randomPass);
-        // when(anyUtilsFactory.getInstance(provision.getAnyType().getKind()).newAnyCR()).thenReturn(aCR);
+        return result;
     }
 }
