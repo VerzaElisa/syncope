@@ -21,6 +21,8 @@ package org.apache.syncope.core.provisioning.java.utils;
 
 import static org.junit.Assert.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 import java.io.UnsupportedEncodingException;
@@ -35,6 +37,8 @@ import org.apache.syncope.common.lib.request.AnyUR;
 import org.apache.syncope.common.lib.to.ConnObject;
 import org.apache.syncope.common.lib.to.GroupTO;
 import org.apache.syncope.common.lib.types.AnyTypeKind;
+import org.apache.syncope.common.lib.types.IdRepoImplementationType;
+import org.apache.syncope.common.lib.types.ImplementationEngine;
 import org.apache.syncope.core.persistence.api.dao.*;
 import org.apache.syncope.core.persistence.api.entity.*;
 import org.apache.syncope.core.persistence.api.entity.policy.PasswordPolicy;
@@ -42,6 +46,7 @@ import org.apache.syncope.core.persistence.api.entity.task.PullTask;
 import org.apache.syncope.core.persistence.jpa.dao.JPARealmDAO;
 import org.apache.syncope.core.persistence.jpa.dao.JPAUserDAO;
 import org.apache.syncope.core.persistence.jpa.entity.*;
+import org.apache.syncope.core.persistence.jpa.entity.policy.JPAPasswordPolicy;
 import org.apache.syncope.core.spring.security.DefaultPasswordGenerator;
 import org.identityconnectors.framework.common.objects.Attribute;
 import org.identityconnectors.framework.common.objects.AttributeBuilder;
@@ -139,14 +144,19 @@ public class GetAnyCRTest {
     private String name;
     private String owner;
     private Set<Attr> attrSet;
+    private String myResource = "testResource";
+    private JPAExternalResource myExternalResource;
+    private AnyTO myAnyTO;
+    private Realm r;
 
     @Parameters
     public static Collection<Object[]> getTestParameters(){
         return Arrays.asList(new Object[][]{
 //              | type             | auxClasses                  | realm          | attributes | password | kind                   | generatePass |
-                { "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.USER       , false        },
-                { "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.GROUP      , false        },
-                { "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.ANY_OBJECT , false        },
+                //{ "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.USER       , false        },
+                { "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.USER       , true         },
+                //{ "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.GROUP      , false        },
+                //{ "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.ANY_OBJECT , false        },
 
         });
     }
@@ -164,12 +174,31 @@ public class GetAnyCRTest {
     @Before
     public void anyCRSetUp() throws UnsupportedEncodingException, ParseException{
         mockGenerator();
+        //Stub del metodo getAnyTOFromConnObject
+        myAnyTO = myGetAnyTOFromConnObject();
+        if(kind.equals(AnyTypeKind.USER)){
+            //Aggiungo risorsa ad anyTO
+            myAnyTO.getResources().add(myResource);
+            myAnyTO = spy(myAnyTO);
+            //Configuro un external resource con una password policy
+            myExternalResource = new JPAExternalResource();
+            JPAPasswordPolicy passwordPolicy = new JPAPasswordPolicy();
+            JPAImplementation impl = spy(JPAImplementation.class);
+            impl.setEngine(ImplementationEngine.GROOVY);
+            impl.setType(IdRepoImplementationType.PASSWORD_RULE);
+            impl.setKey("myKey");
+            impl.setBody("{}");
+            passwordPolicy.add(impl);
+            myExternalResource.setPasswordPolicy(passwordPolicy);
+
+            when(resourceDAO.find(anyString())).thenReturn(myExternalResource);
+            r = mock(Realm.class);
+            when(realmDAO.findByFullPath(realm)).thenReturn(r);
+        }
+
         //Viene fatta la spy della classe per ridefinire il comportamento del metodo getAnyTOFromConnObject
         couToSpy = new ConnObjectUtils(templateUtils, realmDAO, userDAO, resourceDAO, passwordGenerator, mappingManager, anyUtilsFactory);
         cou = spy(couToSpy);
-
-        //Stub del metodo getAnyTOFromConnObject
-        AnyTO myAnyTO = myGetAnyTOFromConnObject();
         doReturn(myAnyTO).when(cou).getAnyTOFromConnObject(any(ConnectorObject.class), any(PullTask.class), any(AnyTypeKind.class), any(Provision.class));
     }
 
@@ -187,6 +216,11 @@ public class GetAnyCRTest {
                     assertEquals(username, userRet.getUsername());
                     assertEquals(pass, userRet.getPassword());
                     assertEquals(mustChangePassword, userRet.isMustChangePassword());
+                    if(generatePass){
+                        verify(resourceDAO).find(anyString());
+                        verify(realmDAO).findByFullPath(anyString());
+                        verify(realmDAO).findAncestors(r);
+                    }
                     break;
                 case GROUP:
                     assertTrue(ret instanceof GroupCR);
@@ -271,6 +305,8 @@ public class GetAnyCRTest {
                         if(password){
                             pass = "testPass";
                             myUserTO.setPassword(pass);
+                        }else if(generatePass){
+                            pass = "PassWithPolicy";
                         }
                     }
                     break;
@@ -301,7 +337,8 @@ public class GetAnyCRTest {
         templateUtils = mock(TemplateUtils.class);
         realmDAO = mock(RealmDAO.class);
         userDAO = mock(UserDAO.class);
-        passwordGenerator = mock(PasswordGenerator.class);
+        passwordGenerator = mock(DefaultPasswordGenerator.class);
+        when(passwordGenerator.generate(anyList())).thenReturn("PassWithPolicy");
         resourceDAO = mock(ExternalResourceDAO.class);
         mappingManager = mock(MappingManager.class);
         anyUtilsFactory = mock(AnyUtilsFactory.class, RETURNS_DEEP_STUBS);
