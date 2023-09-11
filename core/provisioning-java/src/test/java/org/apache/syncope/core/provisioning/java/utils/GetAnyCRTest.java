@@ -130,9 +130,9 @@ public class GetAnyCRTest {
     private VirAttrHandler virAttrHandler;
     private VirAttrCache virAttrCache;
     private IntAttrNameParser intAttrNameParser;
-    private String type;
-    private String auxClasses;
-    private String realm;
+    private boolean typeAux;
+    private String type = "testType";
+    private String auxClasses = "testClassOne testClassTwo";
     private boolean attributes;
     private boolean password;
     private AnyTypeKind kind;
@@ -147,24 +147,28 @@ public class GetAnyCRTest {
     private String myResource = "testResource";
     private JPAExternalResource myExternalResource;
     private AnyTO myAnyTO;
-    private Realm r;
+    private Realm r = null;
+    private String realmPath = "path/to/realm";
+    private boolean realmExists;
+    private int findAncestors = 0;
 
     @Parameters
     public static Collection<Object[]> getTestParameters(){
         return Arrays.asList(new Object[][]{
-//              | type             | auxClasses                  | realm          | attributes | password | kind                   | generatePass |
-                //{ "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.USER       , false        },
-                { "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.USER       , true         },
-                //{ "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.GROUP      , false        },
-                //{ "testType"       , "testClassOne testClassTwo" , "path/to/realm", true       , false    , AnyTypeKind.ANY_OBJECT , false        },
-
+//              | typeAux | realmExists | attributes | password | kind                   | generatePass |
+                { true    , false       , true       , false    , AnyTypeKind.USER       , true         },
+                { true    , true        , true       , false    , AnyTypeKind.GROUP      , true         },
+                { true    , true        , true       , false    , AnyTypeKind.ANY_OBJECT , true         },
+                { false   , true        , false      , false    , AnyTypeKind.USER       , true         },
+                { false   , true        , false      , false    , AnyTypeKind.USER       , false        },
+                { false   , true        , false      , true     , AnyTypeKind.USER       , false        },
+                { true    , true        , false      , false    , AnyTypeKind.ANY_OBJECT , false        },
         });
     }
 
-    public GetAnyCRTest(String type, String auxClasses, String realm, boolean attributes, boolean password, AnyTypeKind kind, boolean generatePass) {
-        this.type = type;
-        this.auxClasses = auxClasses;
-        this.realm = realm;
+    public GetAnyCRTest(boolean typeAux, boolean realmExists, boolean attributes, boolean password, AnyTypeKind kind, boolean generatePass) {
+        this.typeAux = typeAux;
+        this.realmExists = realmExists;
         this.attributes = attributes;
         this.password = password;
         this.kind = kind;
@@ -182,18 +186,12 @@ public class GetAnyCRTest {
             myAnyTO = spy(myAnyTO);
             //Configuro un external resource con una password policy
             myExternalResource = new JPAExternalResource();
-            JPAPasswordPolicy passwordPolicy = new JPAPasswordPolicy();
-            JPAImplementation impl = spy(JPAImplementation.class);
-            impl.setEngine(ImplementationEngine.GROOVY);
-            impl.setType(IdRepoImplementationType.PASSWORD_RULE);
-            impl.setKey("myKey");
-            impl.setBody("{}");
-            passwordPolicy.add(impl);
-            myExternalResource.setPasswordPolicy(passwordPolicy);
-
             when(resourceDAO.find(anyString())).thenReturn(myExternalResource);
-            r = mock(Realm.class);
-            when(realmDAO.findByFullPath(realm)).thenReturn(r);
+            if(realmExists){
+                findAncestors = 1;
+                r = mock(Realm.class);
+            }
+            when(realmDAO.findByFullPath(realmPath)).thenReturn(r);
         }
 
         //Viene fatta la spy della classe per ridefinire il comportamento del metodo getAnyTOFromConnObject
@@ -208,7 +206,7 @@ public class GetAnyCRTest {
         try{
             AnyCR ret = cou.getAnyCR(obj, pullTask, kind, provision, generatePass);
             assertEquals(new HashSet<>(Arrays.asList(auxClasses.split(" "))), ret.getAuxClasses());
-            assertEquals(realm, ret.getRealm());
+            assertEquals(realmPath, ret.getRealm());
             switch(kind){
                 case USER:
                     assertTrue(ret instanceof UserCR);
@@ -219,7 +217,7 @@ public class GetAnyCRTest {
                     if(generatePass){
                         verify(resourceDAO).find(anyString());
                         verify(realmDAO).findByFullPath(anyString());
-                        verify(realmDAO).findAncestors(r);
+                        verify(realmDAO, times(findAncestors)).findAncestors(r);
                     }
                     break;
                 case GROUP:
@@ -293,7 +291,7 @@ public class GetAnyCRTest {
         AnyTO myAnyTO = createAnyTO();
         myAnyTO.setType(type); //Settato solo se l'oggetto è un anyObject
         myAnyTO.getAuxClasses().addAll(new HashSet<>(Arrays.asList(auxClasses.split(" "))));
-        myAnyTO.setRealm(realm);
+        myAnyTO.setRealm(realmPath);
             switch(kind){
                 case USER:
                     if(attributes){
@@ -305,9 +303,10 @@ public class GetAnyCRTest {
                         if(password){
                             pass = "testPass";
                             myUserTO.setPassword(pass);
-                        }else if(generatePass){
-                            pass = "PassWithPolicy";
-                        }
+                        } 
+                    }
+                    if(generatePass){
+                        pass = "PassWithPolicy";
                     }
                     break;
                 case GROUP:
