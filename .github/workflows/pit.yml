@@ -44,7 +44,7 @@ jobs:
       - name: Build and analyze bookkeeper project
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Needed to get PR information, if any
-        run: mvn clean verify -P PitMutationTesting, PitMutationTestingUtils
+        run: mvn clean verify -P PitMutationTesting,PitMutationTestingUtils
       - name: Upload report
         uses: actions/upload-artifact@v3
         with:
