@@ -101,17 +101,17 @@ public class GetAnyCRTest {
     public static Collection<Object[]> getTestParameters(){
         return Arrays.asList(new Object[][]{
 //              | typeAux | realmExists | attributes | password   | kind                   | generatePass | externalRes                              | passwordPolicy |
-                { true    , false       , true       , "passGen"  , AnyTypeKind.USER       , true         , mock(ExternalResource.class) , false          },
+                { true    , false       , true       , "passGen"  , AnyTypeKind.USER       , true         , mock(ExternalResource.class)             , false          },
                 { true    , true        , true       , null       , AnyTypeKind.GROUP      , true         , null                                     , false          },
                 { true    , true        , true       , null       , AnyTypeKind.ANY_OBJECT , true         , null                                     , false          },
-                { false   , true        , false      , "passGen"  , AnyTypeKind.USER       , true         , null                                     , true           },
+                { false   , true        , false      , "passGen"  , AnyTypeKind.USER       , true         , null                                     , false          },
                 { false   , true        , false      , null       , AnyTypeKind.USER       , false        , null                                     , false          },
                 { false   , true        , false      , "testPass" , AnyTypeKind.USER       , false        , null                                     , false          },
                 { true    , true        , false      , null       , AnyTypeKind.ANY_OBJECT , false        , null                                     , false          },
   
-                { true    , false       , true       , "passGen"  , AnyTypeKind.USER       , true         , mock(ExternalResource.class) , true           },
-                { true    , true        , true       , "passGen"  , AnyTypeKind.USER       , true         , mock(ExternalResource.class) , true           },
-
+                { true    , false       , true       , "passGen"  , AnyTypeKind.USER       , true         , mock(ExternalResource.class)             , true           },
+                { true    , true        , true       , "passGen"  , AnyTypeKind.USER       , true         , mock(ExternalResource.class)             , true           },
+                { true    , true        , true       , "passGen"  , AnyTypeKind.USER       , true         , null                                     , true           },
         });
     }
 
@@ -152,6 +152,14 @@ public class GetAnyCRTest {
             if(realmExists){
                 findAncestors = 1;
                 r = mock(Realm.class);
+                if(!passwordPolicy){
+                    timesGetPolRealm = 3;
+                    pp = spy(PasswordPolicy.class);
+                }else if(externalRes == null && passwordPolicy){
+                    pp = null;
+                }else{
+                    timesGetPolRealm = 2;
+                }
                 when(r.getPasswordPolicy()).thenReturn(pp);
                 List<Realm> realmList = Arrays.asList(r);
                 when(realmDAO.findAncestors(any(Realm.class))).thenReturn(realmList);
@@ -186,6 +194,9 @@ public class GetAnyCRTest {
                         if(externalRes != null){
                             verify(externalRes, times(timesGetPolUser)).getPasswordPolicy();
                         }
+                        if(realmExists){
+                            verify(r, times(timesGetPolRealm)).getPasswordPolicy();
+                        }
                     }
                     break;
                 case GROUP:
@@ -198,6 +209,7 @@ public class GetAnyCRTest {
                     assertTrue(ret instanceof AnyObjectCR);
                     AnyObjectCR anyObjectRet = (AnyObjectCR) ret;
                     assertEquals(name, anyObjectRet.getName());
+                    break;
                 default:
             }
         }catch(Exception e){
@@ -205,7 +217,7 @@ public class GetAnyCRTest {
             e.printStackTrace();
         }finally{
             assertNull(ex);
-            // verify(cou).getAnyTOFromConnObject(obj, pullTask, kind, provision);
+            verify(cou).getAnyTOFromConnObject(obj, pullTask, kind, provision);
         }
     }
 
