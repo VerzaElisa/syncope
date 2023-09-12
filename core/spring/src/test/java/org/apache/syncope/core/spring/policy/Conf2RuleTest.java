@@ -88,7 +88,6 @@ private String error = "INSUFFICIENT_SPECIAL";
     @Test
     public void rulesTest(){
         List<Rule> ret = DefaultPasswordRule.conf2Rules(defConf);
-        System.out.println(ret.toString());
         lr = (LengthRule)ret.get(0);
         assertEquals(count, ret.size());
         assertEquals(len, lr.getMinimumLength());

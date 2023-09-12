@@ -46,6 +46,7 @@ import org.apache.syncope.core.persistence.api.dao.ExternalResourceDAO;
 import org.apache.syncope.core.persistence.api.dao.RealmDAO;
 import org.apache.syncope.core.persistence.api.dao.UserDAO;
 import org.apache.syncope.core.persistence.api.entity.AnyUtilsFactory;
+import org.apache.syncope.core.persistence.api.entity.ExternalResource;
 import org.apache.syncope.core.persistence.api.entity.policy.PasswordPolicy;
 import org.apache.syncope.core.persistence.api.entity.task.PullTask;
 import org.apache.syncope.core.persistence.api.entity.user.User;
@@ -198,13 +199,12 @@ public class ConnObjectUtils {
 
             UserCR userCR = (UserCR) anyCR;
             List<PasswordPolicy> passwordPolicies = new ArrayList<>();
-
             // add resource policies
             userCR.getResources().stream().
                     map(resourceDAO::find).
                     filter(r -> r != null && r.getPasswordPolicy() != null).
-                    forEach(r -> passwordPolicies.add(r.getPasswordPolicy()));
-
+                    forEach(r -> passwordPolicies.add(r.getPasswordPolicy()));      
+              
             // add realm policies
             Optional.ofNullable(realmDAO.findByFullPath(userCR.getRealm())).
                     ifPresent(realm -> realmDAO.findAncestors(realm).stream().

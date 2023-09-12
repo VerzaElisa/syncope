@@ -68,31 +68,23 @@ public class GetPassTest {
         BYTE
     }
 
-    private GuardedByteArray gbaPass;
-    private String strPass;
     private final String passToWrite;
     private Object objPass;
     private Object setPass;
-    private ConnObjectUtils cou;
     private ObjType actualObj;
     private String fiql;
     private final String attrName = "TestAttrName";
     private Set<Attribute> set = new HashSet<Attribute>();
-    private Attr attrRet;
-    private ConnectorObject obj;
-    private PullTask pullTask;
     private AnyUtilsFactory anyUtilsFactory;
     private final UserDAO userDAO = mock(JPAUserDAO.class);
     private final TemplateUtils templateUtils = mock(TemplateUtils.class);
     private RealmDAO realmDAO;
-    private final String passToSet = "PasswordToSet";
     private String exception;
     private String ret;
     private List<String> attrVal = new ArrayList<String>();
     private String value;
     private Attribute attr;
     private boolean empty = false;
-    private Provision provision;
 
     @Mock
     ExternalResourceDAO resourceDAO;

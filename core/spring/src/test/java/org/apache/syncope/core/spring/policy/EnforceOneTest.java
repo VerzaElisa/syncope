@@ -106,17 +106,3 @@ private List<Integer> param = Arrays.asList( 8      , 8      , 4     , 2     , 2
     }
 }
 
-
-        // //creazione del plain schema con key
-        // JPAPlainSchema plainSchema = new JPAPlainSchema();
-        // plainSchema.setKey(key);
-        // //creazione plainAttr con schema
-        // JPALAPlainAttr plainAttr = new JPALAPlainAttr();
-        // plainAttr.setSchema(plainSchema);
-        // //assegnazione di un valore all'attr
-        // JPALAPlainAttrUniqueValue unique = spy(JPALAPlainAttrUniqueValue.class);
-        // when(unique.getValueAsString()).thenReturn("testValue");
-        // plainAttr.setUniqueValue(unique);
-        // //creazione linked acoount
-        // JPALinkedAccount account = new LinkedAccount();
-        // account.add(plainAttr);
