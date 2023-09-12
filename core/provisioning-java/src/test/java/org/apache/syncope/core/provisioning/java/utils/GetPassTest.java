@@ -85,6 +85,7 @@ public class GetPassTest {
     private String value;
     private Attribute attr;
     private boolean empty = false;
+    private ConnObjectUtils cou;
 
     @Mock
     ExternalResourceDAO resourceDAO;
